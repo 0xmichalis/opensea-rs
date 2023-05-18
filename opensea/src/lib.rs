@@ -42,7 +42,7 @@ pub async fn get_n_cheapest_orders(
         .get_orders(req)
         .await?
         .into_iter()
-        .filter(|order| order.base_price > parse_units("1", 16).unwrap())
+        .filter(|order| order.base_price > parse_units("1", 16).unwrap().into())
         .collect::<Vec<_>>();
     orders.sort_by(|o1, o2| o1.current_price.cmp(&o2.current_price));
 
