@@ -87,18 +87,15 @@ cargo build [--release]
 
 ## Features
 
-* [x] Opensea API
-* [x] Opensea Types (Orders etc.)
-* [x] Opensea Contract clients
-    * [x] ERC721
-    * [x] ERC1155
-    * [x] Fill a Sell order
+* [ ] Opensea API
+    * [ ] Pagination 
+* [ ] Opensea Types (Orders etc.)
+* [ ] Opensea Contract clients
+    * [ ] ERC721
+    * [ ] ERC1155
+    * [ ] Fill a Sell order
+    * [ ] Fill a Buy order
     * [ ] Generalize the API to arbitrary Opensea marketplace schemas
-* [x] CLI for operations
-    * [x] Flashbots contract deployer
-    * [x] Query prices
-    * [x] Purchase NFT(s)
-    * [ ] Sniping drops (pre-configuring the target and looping)
 
 ## Running ignored tests
 
