@@ -1,33 +1,80 @@
-use crate::{constants, contracts};
+use crate::contracts;
 use ethers::{
     core::utils::id,
     types::{Address, Bytes, H256, U256},
 };
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug)]
-pub enum Network {
-    Mainnet,
-    Rinkeby,
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct OrderRequest {
+    pub side: u64, // 0 for buy order
+    pub token_id: String,
+    pub contract_address: Address,
+    pub limit: u64,
 }
 
-impl Network {
-    pub fn url(&self) -> &str {
-        match self {
-            Network::Mainnet => constants::API_BASE_MAINNET,
-            Network::Rinkeby => constants::API_BASE_RINKEBY,
-        }
-    }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct OrderResponse {
+    count: u64,
+    pub orders: Vec<Order>,
+}
 
-    pub fn orderbook(&self) -> String {
-        let url = self.url();
-        format!("{}/wyvern/v{}", url, constants::ORDERBOOK_VERSION)
-    }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct OrderRequestV2 {
+    pub chain: String,
+    pub order_hash: String,
+}
 
-    pub fn api(&self) -> String {
-        let url = self.url();
-        format!("{}/api/v{}", url, constants::ORDERBOOK_VERSION)
-    }
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct OrderResponseV2 {
+    pub order: OrderV2,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct OrderV2 {
+    pub order_hash: H256,
+    pub chain: String,
+    pub protocol_data: ProtocolData,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ProtocolData {
+    pub parameters: Parameters,
+    pub signature: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Parameters {
+    pub offerer: Address,
+    pub offer: Vec<Offer>,
+    pub consideration: Vec<Consideration>,
+    #[serde(deserialize_with = "u256_from_dec_str")]
+    pub startTime: U256,
+    #[serde(deserialize_with = "u256_from_dec_str")]
+    pub endTime: U256,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Offer {
+    pub itemType: u8,
+    pub token: Address,
+    pub identifierOrCriteria: String,
+    #[serde(deserialize_with = "u256_from_dec_str")]
+    pub startAmount: U256,
+    #[serde(deserialize_with = "u256_from_dec_str")]
+    pub endAmount: U256,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Consideration {
+    pub itemType: u8,
+    pub token: Address,
+    pub identifierOrCriteria: String,
+    #[serde(deserialize_with = "u256_from_dec_str")]
+    pub startAmount: U256,
+    #[serde(deserialize_with = "u256_from_dec_str")]
+    pub endAmount: U256,
+    pub recipient: Address,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -294,6 +341,6 @@ mod tests {
 
     #[test]
     fn deser_order() {
-        let _order: Order = serde_json::from_str(include_str!("./../../order.json")).unwrap();
+        let _order: OrderResponseV2 = serde_json::from_str(include_str!("./../../order.json")).unwrap();
     }
 }

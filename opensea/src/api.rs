@@ -1,17 +1,18 @@
+use std::env;
+
 use ethers::types::Address;
 use reqwest::{
     header::{self, HeaderMap},
     Client, ClientBuilder,
 };
-use serde::{Deserialize, Serialize};
 
-use crate::types::{Network, Order};
+use crate::{types::{OrderV2, OrderRequest, OrderResponse, Order, OrderRequestV2, OrderResponseV2}, constants};
 use thiserror::Error;
 
 #[derive(Clone, Debug)]
 pub struct OpenSeaApi {
     client: Client,
-    network: Network,
+    base_url: String,
 }
 
 impl OpenSeaApi {
@@ -29,13 +30,12 @@ impl OpenSeaApi {
 
         Self {
             client,
-            network: cfg.network,
+            base_url: constants::API_BASE_URL.to_string(),
         }
     }
 
     pub async fn get_orders(&self, req: OrderRequest) -> Result<Vec<Order>, OpenSeaApiError> {
-        let orderbook = self.network.orderbook();
-        let url = format!("{}/orders", orderbook);
+        let url = format!("{}/wyvern/v1/orders", self.base_url);
 
         // convert the request to a url encoded order
         let mut map = std::collections::HashMap::new();
@@ -66,34 +66,27 @@ impl OpenSeaApi {
             })?;
         Ok(order)
     }
-}
 
-//   return api.getOrder({ side: OrderSide.Sell, token_id: tokenId.toNumber(), asset_contract_address: address })
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct OrderRequest {
-    pub side: u64, // 0 for buy order
-    pub token_id: String,
-    pub contract_address: Address,
-    pub limit: u64,
-}
+    pub async fn get_order_v2(&self, req: OrderRequestV2) -> Result<OrderV2, OpenSeaApiError> {
+        let url = format!("{}/orders/chain/{}/protocol/0x00000000000000adc04c56bf30ac9d3c0aaf14dc/{}", self.base_url, req.chain, req.order_hash);
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-struct OrderResponse {
-    count: u64,
-    orders: Vec<Order>,
+        let res = self.client.get(url).send().await?;
+        let text = res.text().await?;
+        let resp: OrderResponseV2 = serde_json::from_str(&text)?;
+
+        Ok(resp.order)
+    }
 }
 
 #[derive(Clone, Debug)]
 pub struct OpenSeaApiConfig {
     pub api_key: Option<String>,
-    pub network: Network,
 }
 
 impl Default for OpenSeaApiConfig {
     fn default() -> Self {
         Self {
-            api_key: None,
-            network: Network::Mainnet,
+            api_key: Some(env::var("OPENSEA_API_KEY").unwrap()),
         }
     }
 }
@@ -110,29 +103,19 @@ pub enum OpenSeaApiError {
 
 #[cfg(test)]
 mod tests {
-    use crate::types::MinimalOrder;
-
     use super::*;
 
     #[tokio::test]
     async fn can_get_order() {
         let api = OpenSeaApi::new(OpenSeaApiConfig::default());
 
-        let req = OrderRequest {
-            side: 1,
-            token_id: 2292.to_string(),
-            contract_address: "0x7d256d82b32d8003d1ca1a1526ed211e6e0da9e2"
+        let req = OrderRequestV2 {
+            chain: "ethereum".to_string(),
+            order_hash: "0x5168ae982c8d0bd40267a318cf88c542b9e2dc1a8f73a655a20b987fc01f0cea"
                 .parse()
                 .unwrap(),
-            limit: 99,
         };
-        let addr = req.contract_address;
-        let order = api.get_order(req).await.unwrap();
-        let order = MinimalOrder::from(order);
-        assert_eq!(order.target, addr);
-        assert_eq!(order.maker_relayer_fee, 600.into());
-        assert_eq!(order.taker_relayer_fee, 0.into());
-        assert_eq!(order.maker_protocol_fee, 0.into());
-        assert_eq!(order.taker_protocol_fee, 0.into());
+        let order = api.get_order_v2(req).await.unwrap();
+        println!("order: {:?}", &order);
     }
 }

@@ -9,10 +9,10 @@ use ethers::{
     utils::parse_units,
 };
 pub use types::BuyArgs;
-use types::Order;
+use types::{Order, OrderRequest};
 
 pub mod api;
-pub use api::{OpenSeaApi, OpenSeaApiError, OrderRequest};
+pub use api::{OpenSeaApi, OpenSeaApiError};
 
 mod contracts;
 pub use contracts::OpenSea;
